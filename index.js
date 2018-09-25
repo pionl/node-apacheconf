@@ -24,7 +24,7 @@ module.exports = function(filename, options, cb) {
   var stream = fs.createReadStream(filename)
     , parser = new Parser()
 
-  parser.serverRoot = options.serverRoot || '/usr/local/apache'
+  parser.serverRoot = options.serverRoot || path.dirname(filename)
 
   parser.file = filename
   parser._stream = es.pause()
@@ -154,6 +154,7 @@ Parser.prototype.write = function(line) {
 
     switch(name) {
     case 'Include':
+    case 'IncludeOptional':
       var self = this
         , filepath = path.resolve(this._getProp('serverRoot'), value)
 
@@ -222,13 +223,27 @@ Parser.prototype.add = function(name, value) {
     this.config[name].comments = []
   }
 
+  // Use the server root from config file
+  if (name === 'ServerRoot') {
+    this.serverRoot = removeQuotes(value)
+  }
+
   this.config[name].push(value)
   this.config[name].comments.push(this._comments)
 
-  this.emit('data', { name: name, value: value })
-  this.emit(name, value)
-
+  this.emitValue(name, value)
   this._comments = []
+
+}
+
+Parser.prototype.emitValue = function (name, value) {
+    this.emit('data', { name: name, value: value })
+    this.emit(name, value)
+
+    // Trigger event on parent
+    if (this._parent) {
+      this._parent.emitValue(name, value)
+    }
 }
 
 Parser.prototype._getProp = function(prop) {
