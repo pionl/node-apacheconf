@@ -248,9 +248,9 @@ Parser.prototype.emitValue = function (name, value) {
 
 Parser.prototype._getProp = function(prop) {
   var that = this
-  while(!(prop in that) && that._parent) {
-    that = that._parent
-  }
+    if (typeof that[prop] === 'undefined' && that._parent) {
+      that = that._parent;
+    }
   return that[prop]
 }
 
